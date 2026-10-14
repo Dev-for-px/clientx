@@ -1,12 +1,13 @@
+import Link from "next/link";
 import { AccessForm } from "@/components/AccessForm";
-import { setFormPassword, toggleAccess } from "@/app/actions/data";
+import { setFormPassword } from "@/app/actions/data";
 import { getConfig, readAll } from "@/lib/db";
-import { requireOwner } from "@/lib/auth";
+import { requirePerm } from "@/lib/auth";
 
 const fmt = (iso: string) => (iso ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—");
 
 export default async function Acessos() {
-  await requireOwner();
+  await requirePerm("acessos");
   const exigeSenha = (await getConfig("form_senha", "sim")) !== "nao";
   const hoje = new Date().toISOString().slice(0, 10);
   const rows = (await readAll("Acessos")).sort((a, b) => b.criado_em.localeCompare(a.criado_em));
@@ -52,15 +53,7 @@ export default async function Acessos() {
                       <td>{a.validade ? new Date(a.validade + "T12:00:00").toLocaleDateString("pt-BR") : "Sem validade"}</td>
                       <td>{fmt(a.ultimo_uso)}</td>
                       <td>{a.cadastros || "0"}</td>
-                      <td>
-                        <form action={toggleAccess}>
-                          <input type="hidden" name="id" value={a.id} />
-                          <input type="hidden" name="ativo" value={a.ativo === "sim" ? "nao" : "sim"} />
-                          <button type="submit" className={`btn btn-sm ${a.ativo === "sim" ? "danger" : ""}`}>
-                            {a.ativo === "sim" ? "Desativar" : "Reativar"}
-                          </button>
-                        </form>
-                      </td>
+                      <td><Link className="btn btn-sm" href={`/painel/acessos/${a.id}`}>Editar</Link></td>
                     </tr>
                   );
                 })}
@@ -68,7 +61,7 @@ export default async function Acessos() {
             </table>
           )}
         </div>
-        <p className="note">As senhas são guardadas só como hash (bcrypt) e nunca podem ser vistas de novo. Para trocar, desative e crie um novo acesso.</p>
+        <p className="note">As senhas são guardadas só como hash (bcrypt) e nunca podem ser vistas de novo. Para trocar, clique em Editar e defina uma nova senha.</p>
       </div>
     </>
   );

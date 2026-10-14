@@ -14,7 +14,7 @@ export default async function PainelLayout({ children }: { children: React.React
         <div style={{ padding: "0 6px", fontSize: 13, color: "var(--muted)" }}>
           Olá, <b style={{ color: "var(--ink)" }}>{me.nome}</b>
         </div>
-        <SideNav dono={me.papel === "dono"} />
+        <SideNav dono={me.papel === "dono"} perms={me.perms} />
         <form action={adminLogout} style={{ marginTop: "auto" }}>
           <button type="submit" className="btn btn-sm" style={{ width: "100%" }}>Sair</button>
         </form>

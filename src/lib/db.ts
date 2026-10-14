@@ -125,6 +125,32 @@ export async function updateById(tab: TabName, id: string, patch: Row): Promise<
   return ((await res.json()) as unknown[]).length > 0;
 }
 
+// Exclui de verdade a linha no banco (Clientes, Acessos ou Usuarios).
+export async function deleteById(tab: "Clientes" | "Acessos" | "Usuarios", id: string): Promise<boolean> {
+  if (!/^[A-Za-z0-9_-]{6,30}$/.test(id)) return false;
+  if (!cfg()) {
+    const db = await localRead();
+    const antes = (db[tab] ?? []).length;
+    db[tab] = (db[tab] ?? []).filter((r) => r.id !== id);
+    await localWrite(db);
+    return db[tab].length < antes;
+  }
+  const res = await rest(tab, `?id=eq.${id}`, { method: "DELETE", headers: { Prefer: "return=representation" } });
+  return ((await res.json()) as unknown[]).length > 0;
+}
+
+// Apaga eventos do registro: todos, ou só os anteriores a `antesDe` (ISO).
+export async function clearLog(antesDe?: string): Promise<void> {
+  if (!cfg()) {
+    const db = await localRead();
+    db.Log = antesDe ? (db.Log ?? []).filter((r) => r.quando >= antesDe) : [];
+    return localWrite(db);
+  }
+  // O PostgREST exige um filtro para DELETE; seq >= 0 pega todas as linhas.
+  const filtro = antesDe ? `?quando=lt.${encodeURIComponent(antesDe)}` : "?seq=gte.0";
+  await rest("Log", filtro, { method: "DELETE" });
+}
+
 // Configurações simples (chave → valor).
 export async function getConfig(id: string, fallback: string): Promise<string> {
   return (await readAll("Config")).find((r) => r.id === id)?.valor ?? fallback;

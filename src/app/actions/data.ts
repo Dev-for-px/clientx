@@ -3,11 +3,12 @@
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
-import { audit, isLocked, recordAttempt, requireAdmin, requireForm, requireOwner } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { audit, isLocked, recordAttempt, requireForm, requireOwner, requirePerm } from "@/lib/auth";
 import { newId } from "@/lib/crypto";
 import { sealRow } from "@/lib/clients";
 import { ADMIN_EXTRA, FORM_SECTIONS, buildSchema, formDataToObject } from "@/lib/fields";
-import { append, getConfig, readAll, setConfig, updateById } from "@/lib/db";
+import { append, clearLog as clearLogRows, deleteById, getConfig, readAll, setConfig, updateById } from "@/lib/db";
 
 export type DataState = { error?: string; ok?: string; secret?: string };
 
@@ -20,6 +21,13 @@ export async function submitClient(_: DataState, fd: FormData): Promise<DataStat
     // Sem senha: o dono pode ter religado a senha; e limitamos cadastros por origem.
     if ((await getConfig("form_senha", "sim")) !== "nao") return { error: "O formulário agora exige senha. Recarregue a página." };
     if (await isLocked("cadastro_livre", 15)) return { error: "Muitos cadastros seguidos. Aguarde alguns minutos." };
+  } else {
+    // Acesso desativado, vencido ou excluído deixa de valer na hora.
+    const hoje = new Date().toISOString().slice(0, 10);
+    const a = (await readAll("Acessos")).find((x) => x.id === s.acesso);
+    if (!a || a.ativo !== "sim" || (a.validade && a.validade < hoje)) {
+      return { error: "Seu acesso ao formulário foi desativado. Fale com o responsável." };
+    }
   }
   const parsed = formSchema.safeParse(formDataToObject(fd, FORM_SECTIONS));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
@@ -44,7 +52,7 @@ export async function submitClient(_: DataState, fd: FormData): Promise<DataStat
 }
 
 export async function updateClient(id: string, _: DataState, fd: FormData): Promise<DataState> {
-  const me = await requireAdmin();
+  const me = await requirePerm("clientes_editar");
   if (!/^[A-Za-z0-9_-]{6,20}$/.test(id)) return { error: "Cliente inválido" };
   const parsed = adminSchema.safeParse(formDataToObject(fd, [...FORM_SECTIONS, ADMIN_EXTRA]));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
@@ -58,14 +66,25 @@ export async function updateClient(id: string, _: DataState, fd: FormData): Prom
   return { ok: "Alterações salvas." };
 }
 
+export async function deleteClient(fd: FormData) {
+  const me = await requirePerm("clientes_excluir");
+  const id = String(fd.get("id") ?? "");
+  if (await deleteById("Clientes", id)) await audit(me.nome, "cliente_excluido", id);
+  revalidatePath("/painel");
+  redirect("/painel");
+}
+
 function strongPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
   const bytes = randomBytes(14);
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
 
+const VALIDADES = ["0", "7", "30", "90"];
+const validadeEm = (dias: number) => (dias ? new Date(Date.now() + dias * 86400000).toISOString().slice(0, 10) : "");
+
 export async function createAccess(_: DataState, fd: FormData): Promise<DataState> {
-  const me = await requireOwner();
+  const me = await requirePerm("acessos");
   const nome = String(fd.get("nome") ?? "").trim().slice(0, 80);
   const validadeDias = String(fd.get("validade") ?? "0");
   let senha = String(fd.get("senha") ?? "").trim();
@@ -73,16 +92,13 @@ export async function createAccess(_: DataState, fd: FormData): Promise<DataStat
   if (!senha) senha = strongPassword();
   if (senha.length < 10) return { error: "A senha precisa ter pelo menos 10 caracteres." };
 
-  const dias = ["0", "7", "30", "90"].includes(validadeDias) ? Number(validadeDias) : 0;
-  const validade = dias ? new Date(Date.now() + dias * 86400000).toISOString().slice(0, 10) : "";
-
   await append("Acessos", {
     id: newId(),
     nome,
     senha_hash: await bcrypt.hash(senha, 12),
     ativo: "sim",
     criado_em: new Date().toISOString(),
-    validade,
+    validade: validadeEm(VALIDADES.includes(validadeDias) ? Number(validadeDias) : 0),
     ultimo_uso: "",
     cadastros: "0",
   });
@@ -91,13 +107,34 @@ export async function createAccess(_: DataState, fd: FormData): Promise<DataStat
   return { ok: `Acesso criado para ${nome}. Copie a senha agora — ela não será mostrada de novo.`, secret: senha };
 }
 
-export async function toggleAccess(fd: FormData) {
-  const me = await requireOwner();
-  const id = String(fd.get("id") ?? "");
-  const ativo = String(fd.get("ativo") ?? "") === "sim" ? "sim" : "nao";
-  await updateById("Acessos", id, { ativo });
-  await audit(me.nome, ativo === "sim" ? "acesso_ativado" : "acesso_desativado", id);
+// Edita nome, senha (opcional), validade e status de um acesso ao formulário.
+export async function updateAccess(id: string, _: DataState, fd: FormData): Promise<DataState> {
+  const me = await requirePerm("acessos");
+  const a = (await readAll("Acessos")).find((x) => x.id === id);
+  if (!a) return { error: "Acesso não encontrado." };
+  const nome = String(fd.get("nome") ?? "").trim().slice(0, 80);
+  const senha = String(fd.get("senha") ?? "").trim();
+  const validade = String(fd.get("validade") ?? "manter");
+  if (!nome) return { error: "Informe o nome de quem vai usar." };
+  if (senha && senha.length < 10) return { error: "A senha precisa ter pelo menos 10 caracteres." };
+  if (senha.length > 100) return { error: "Senha longa demais." };
+
+  const patch: Record<string, string> = { nome, ativo: String(fd.get("ativo") ?? "") === "nao" ? "nao" : "sim" };
+  if (senha) patch.senha_hash = await bcrypt.hash(senha, 12);
+  if (VALIDADES.includes(validade)) patch.validade = validadeEm(Number(validade));
+  await updateById("Acessos", id, patch);
+  await audit(me.nome, "acesso_editado", nome);
   revalidatePath("/painel/acessos");
+  return { ok: senha ? "Alterações salvas. A senha antiga parou de funcionar." : "Alterações salvas." };
+}
+
+export async function deleteAccess(fd: FormData) {
+  const me = await requirePerm("acessos");
+  const id = String(fd.get("id") ?? "");
+  const a = (await readAll("Acessos")).find((x) => x.id === id);
+  if (a && (await deleteById("Acessos", id))) await audit(me.nome, "acesso_excluido", a.nome);
+  revalidatePath("/painel/acessos");
+  redirect("/painel/acessos");
 }
 
 export async function runBackup(): Promise<void> {
@@ -112,8 +149,20 @@ export async function runBackup(): Promise<void> {
   revalidatePath("/painel/log");
 }
 
-export async function setFormPassword(fd: FormData) {
+// Limpa o registro de atividades direto no banco (Supabase). Só o dono.
+export async function clearLog(fd: FormData) {
   const me = await requireOwner();
+  const modo = String(fd.get("modo") ?? "");
+  if (modo === "tudo") await clearLogRows();
+  else if (modo === "30") await clearLogRows(new Date(Date.now() - 30 * 86400000).toISOString());
+  else return;
+  // Fica registrado quem limpou e quando.
+  await audit(me.nome, "log_limpo", modo === "tudo" ? "tudo" : "mais de 30 dias");
+  revalidatePath("/painel/log");
+}
+
+export async function setFormPassword(fd: FormData) {
+  const me = await requirePerm("acessos");
   const v = String(fd.get("valor") ?? "") === "nao" ? "nao" : "sim";
   await setConfig("form_senha", v);
   await audit(me.nome, v === "sim" ? "form_senha_ligada" : "form_senha_desligada");

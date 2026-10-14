@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { COOKIES, verify } from "./jwt";
 import { append, readAll, recentAttempts } from "./db";
 import { sha256 } from "./crypto";
+import { ALL_PERMS, parsePapel, type Perm } from "./perms";
 
 export function clientIp(): string {
   const h = headers();
@@ -13,23 +14,30 @@ export function clientIp(): string {
 export const ipHash = () => sha256("cx:" + clientIp()).slice(0, 16);
 
 // Toda ação protegida chama isto de novo — o middleware não é a única barreira.
-export type Sess = { sub: string; papel: "dono" | "membro"; nome: string };
+export type Sess = { sub: string; papel: "dono" | "membro"; nome: string; perms: Perm[] };
 
 // Dono (configurado na Vercel) ou membro da equipe ativo.
 export async function requireAdmin(): Promise<Sess> {
   const s = await verify("admin", cookies().get(COOKIES.admin)?.value);
   if (!s || typeof s.sub !== "string") redirect("/");
   // "admin" = sessão criada antes da atualização da equipe (só o dono existia).
-  if (s.papel === "dono" || s.sub === "admin") return { sub: "dono", papel: "dono", nome: String(s.nome ?? "Dono") };
-  // Membro desativado perde o acesso na hora, mesmo com sessão aberta.
+  if (s.papel === "dono" || s.sub === "admin") return { sub: "dono", papel: "dono", nome: String(s.nome ?? "Dono"), perms: ALL_PERMS };
+  // Membro desativado ou excluído perde o acesso na hora, mesmo com sessão aberta.
+  // As permissões também são lidas a cada pedido: mudanças valem na hora.
   const u = (await readAll("Usuarios")).find((x) => x.id === s.sub);
   if (!u || u.ativo !== "sim") redirect("/");
-  return { sub: u.id, papel: "membro", nome: u.nome };
+  return { sub: u.id, papel: "membro", nome: u.nome, perms: parsePapel(u.papel) };
 }
 
 export async function requireOwner(): Promise<Sess> {
   const s = await requireAdmin();
   if (s.papel !== "dono") redirect("/painel");
+  return s;
+}
+
+export async function requirePerm(p: Perm): Promise<Sess> {
+  const s = await requireAdmin();
+  if (!s.perms.includes(p)) redirect("/painel");
   return s;
 }
 

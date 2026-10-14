@@ -113,3 +113,7 @@ td .s { font-size: 12px; color: var(--muted); }
   .nav { flex-direction: row; flex-wrap: wrap; }
   .top, .content { padding-left: 16px; padding-right: 16px; }
 }
+.checks { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.checks legend { margin-bottom: 8px; }
+.checks label { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+.checks input { width: 18px; height: 18px; accent-color: var(--accent); }

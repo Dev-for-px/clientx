@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { brl, listClients, num, safeUrl } from "@/lib/clients";
+import { requireAdmin } from "@/lib/auth";
 
 const statusPill: Record<string, string> = {
   Ativo: "p-ok", "Em implantação": "p-info", Suspenso: "p-orange", Inativo: "p-off",
@@ -11,6 +12,8 @@ const finPill: Record<string, string> = {
 type SP = { q?: string; status?: string; fin?: string; gerente?: string };
 
 export default async function Clientes({ searchParams }: { searchParams: SP }) {
+  const me = await requireAdmin();
+  const podeEditar = me.perms.includes("clientes_editar");
   const all = await listClients();
   const q = (searchParams.q ?? "").toLowerCase().slice(0, 100);
   const rows = all
@@ -71,7 +74,7 @@ export default async function Clientes({ searchParams }: { searchParams: SP }) {
               <thead>
                 <tr>
                   <th>Cliente</th><th>Status</th><th>Financeiro</th><th>Dia da fatura</th><th>Pagamento</th>
-                  <th>Em aberto</th><th>Gerente</th><th>Domínios</th><th>Comunicação</th>
+                  <th>Em aberto</th><th>Gerente</th><th>Domínios</th><th>Comunicação</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -98,6 +101,7 @@ export default async function Clientes({ searchParams }: { searchParams: SP }) {
                           {!wa && !sg && "—"}
                         </div>
                       </td>
+                      <td><Link className="btn btn-sm" href={`/painel/clientes/${c.id}`}>{podeEditar ? "Editar" : "Ver"}</Link></td>
                     </tr>
                   );
                 })}
