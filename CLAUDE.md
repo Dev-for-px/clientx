@@ -20,10 +20,13 @@ Sistema interno de gestão de clientes (formulário de cadastro + painel). Usuá
 - Push na `main` publica automaticamente.
 
 ## Pendências
-- Confirmar acesso ao painel após correção de sessão antiga (commit "Mantém sessões do dono...").
 - Backup refeito (Apps Script v2, com `autorizar` e diagnóstico em `doGet`): reinstalar a planilha do zero seguindo o LEIA-ME §3 e testar pelo botão no Log.
-- Feito em 2026-10-14: tabelas `usuarios` e `config` confirmadas no Supabase (6 tabelas, RLS ligado).
 - Opcional: trocar domínio (`clientx.vercel.app` já é de outro projeto).
+
+## Feito (2026-10-14)
+- Tabelas `usuarios` e `config` confirmadas no Supabase (6 tabelas, RLS ligado).
+- Acesso ao painel confirmado após a correção de sessão antiga.
+- Equipe e acessos editáveis/excluíveis, permissões por membro, limpeza do Log e edição de clientes publicados e testados no site.
 
 ## Testes
 `SUPABASE_URL=local` + `ALLOW_LOCAL_STORE=1` usa arquivo `.data/db.json` (só para teste local).
