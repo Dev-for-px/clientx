@@ -52,7 +52,13 @@ ADMIN_PASSWORD_HASH=${Buffer.from(bcrypt.hashSync(senha, 12)).toString("base64")
 ADMIN_TOTP_SECRET=${totp}
 ADMIN_PATH=${adminPath}
 
-# Google (preencha com os dados da conta de serviço e da planilha)
+CRON_SECRET=${randomBytes(32).toString("base64url")}
+
+# Supabase (Project Settings → API)
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Backup na planilha Google (conta de serviço)
 SHEET_ID=
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=

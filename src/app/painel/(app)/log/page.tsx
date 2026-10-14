@@ -1,4 +1,6 @@
-import { readAll } from "@/lib/sheets";
+import { readAll } from "@/lib/db";
+import { runBackup } from "@/app/actions/data";
+import { Submit } from "@/components/Submit";
 
 const ACOES: Record<string, string> = {
   login_ok: "Entrou no painel",
@@ -11,10 +13,12 @@ const ACOES: Record<string, string> = {
   acesso_criado: "Criou acesso",
   acesso_desativado: "Desativou acesso",
   acesso_ativado: "Reativou acesso",
+  backup_ok: "Backup na planilha feito",
+  backup_falhou: "Backup na planilha falhou",
 };
 
 export default async function Log() {
-  const rows = (await readAll("Log")).sort((a, b) => b.quando.localeCompare(a.quando)).slice(0, 200);
+  const rows = (await readAll("Log")).reverse().slice(0, 200);
   return (
     <>
       <header className="top">
@@ -22,6 +26,9 @@ export default async function Log() {
           <h1>Registro de atividades</h1>
           <p className="sub">Últimos 200 eventos: logins, tentativas e alterações</p>
         </div>
+        <form action={runBackup}>
+          <Submit className="btn">Fazer backup agora</Submit>
+        </form>
       </header>
       <div className="content">
         <div className="tablebox">

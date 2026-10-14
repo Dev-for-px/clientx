@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { env } from "@/lib/env";
 import { COOKIES, cookieOpts, sign, verify } from "@/lib/jwt";
 import { audit, isLocked, recordAttempt, slow } from "@/lib/auth";
-import { append, readAll, updateById } from "@/lib/sheets";
+import { append, readAll, recentAttempts, updateById } from "@/lib/db";
 import { safeEqual, sha256 } from "@/lib/crypto";
 
 export type State = { error?: string };
@@ -45,9 +45,7 @@ export async function adminVerify2fa(_: State, fd: FormData): Promise<State> {
   // Um código não pode ser usado duas vezes (proteção contra repetição).
   const reused =
     valid &&
-    (await readAll("Tentativas")).some(
-      (r) => r.tipo === "totp_usado" && r.chave === sha256(code) && Date.now() - Date.parse(r.quando) < 120_000,
-    );
+    (await recentAttempts("totp_usado", sha256(code), new Date(Date.now() - 120_000).toISOString())).length > 0;
   await slow();
 
   if (!valid || reused) {

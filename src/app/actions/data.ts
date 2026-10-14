@@ -7,7 +7,7 @@ import { audit, requireAdmin, requireForm } from "@/lib/auth";
 import { newId } from "@/lib/crypto";
 import { sealRow } from "@/lib/clients";
 import { ADMIN_EXTRA, FORM_SECTIONS, buildSchema, formDataToObject } from "@/lib/fields";
-import { append, readAll, updateById } from "@/lib/sheets";
+import { append, readAll, updateById } from "@/lib/db";
 
 export type DataState = { error?: string; ok?: string; secret?: string };
 
@@ -92,4 +92,16 @@ export async function toggleAccess(fd: FormData) {
   await updateById("Acessos", id, { ativo });
   await audit("admin", ativo === "sim" ? "acesso_ativado" : "acesso_desativado", id);
   revalidatePath("/painel/acessos");
+}
+
+export async function runBackup(): Promise<void> {
+  await requireAdmin();
+  const { backupToSheet } = await import("@/lib/sheets");
+  try {
+    const counts = await backupToSheet();
+    await audit("admin", "backup_ok", JSON.stringify(counts));
+  } catch (e) {
+    await audit("admin", "backup_falhou", String(e));
+  }
+  revalidatePath("/painel/log");
 }

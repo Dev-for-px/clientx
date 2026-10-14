@@ -28,13 +28,4 @@ export const env = {
   get adminTotpSecret() {
     return req("ADMIN_TOTP_SECRET");
   },
-  get sheetId() {
-    return req("SHEET_ID");
-  },
-  get googleEmail() {
-    return req("GOOGLE_SERVICE_ACCOUNT_EMAIL");
-  },
-  get googleKey() {
-    return req("GOOGLE_PRIVATE_KEY").replace(/\\n/g, "\n");
-  },
 };

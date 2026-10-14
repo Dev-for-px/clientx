@@ -2,7 +2,7 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { COOKIES, verify } from "./jwt";
-import { append, readAll } from "./sheets";
+import { append, recentAttempts } from "./db";
 import { sha256 } from "./crypto";
 
 export function clientIp(): string {
@@ -30,13 +30,9 @@ const MAX_FAILS = 5;
 
 // Bloqueio por excesso de tentativas (por IP e por tipo).
 export async function isLocked(tipo: string): Promise<boolean> {
-  const since = Date.now() - WINDOW_MS;
-  const chave = ipHash();
-  const rows = await readAll("Tentativas");
-  const fails = rows.filter(
-    (r) => r.tipo === tipo && r.chave === chave && r.sucesso === "nao" && Date.parse(r.quando) > since,
-  ).length;
-  return fails >= MAX_FAILS;
+  const since = new Date(Date.now() - WINDOW_MS).toISOString();
+  const rows = await recentAttempts(tipo, ipHash(), since);
+  return rows.filter((r) => r.sucesso === "nao").length >= MAX_FAILS;
 }
 
 export async function recordAttempt(tipo: string, ok: boolean) {

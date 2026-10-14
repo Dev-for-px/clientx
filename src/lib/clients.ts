@@ -1,6 +1,6 @@
 import "server-only";
 import { decrypt, encrypt } from "./crypto";
-import { readAll, type Row } from "./sheets";
+import { readAll, type Row } from "./db";
 
 // Campos guardados criptografados na planilha.
 export const ENCRYPTED = [

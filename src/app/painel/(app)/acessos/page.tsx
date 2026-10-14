@@ -1,6 +1,6 @@
 import { AccessForm } from "@/components/AccessForm";
 import { toggleAccess } from "@/app/actions/data";
-import { readAll } from "@/lib/sheets";
+import { readAll } from "@/lib/db";
 
 const fmt = (iso: string) => (iso ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—");
 
