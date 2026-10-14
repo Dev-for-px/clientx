@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     await append("Log", { quando: new Date().toISOString(), quem: "sistema", acao: "backup_ok", detalhe: JSON.stringify(counts), ip_hash: "" });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    await append("Log", { quando: new Date().toISOString(), quem: "sistema", acao: "backup_falhou", detalhe: String(e).slice(0, 200), ip_hash: "" });
+    await append("Log", { quando: new Date().toISOString(), quem: "sistema", acao: "backup_falhou", detalhe: (e instanceof Error ? e.message : String(e)).slice(0, 300), ip_hash: "" });
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }

@@ -34,11 +34,15 @@ Ele pede e-mail e senha do admin (mín. 14 caracteres) e cria:
 
 ## 3. Planilha de backup (só Planilha + Apps Script)
 1. Crie uma planilha vazia (sheets.new).
-2. **Extensões → Apps Script**. Apague o código de exemplo, cole o conteúdo de `apps-script/Backup.gs` e salve.
-3. **Configurações do projeto (engrenagem) → Propriedades do script → Adicionar**: `BACKUP_TOKEN` = o mesmo valor do `BACKUP_TOKEN` da Vercel.
-4. **Implantar → Nova implantação → tipo App da Web**. Executar como: **Eu**. Quem pode acessar: **Qualquer pessoa**. Autorize.
-5. Copie a URL que termina em `/exec` para `APPS_SCRIPT_URL` na Vercel e faça Redeploy.
-Sem o token correto, o script recusa qualquer envio.
+2. **Extensões → Apps Script** (criar o script de dentro da planilha). Apague o código de exemplo, cole **todo** o `apps-script/Backup.gs` e salve.
+3. **Configurações do projeto (engrenagem) → Propriedades do script → Adicionar**: `BACKUP_TOKEN` = o mesmo valor do `BACKUP_TOKEN` da Vercel (mín. 32 caracteres). Gere um com `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`.
+4. No editor, escolha a função **`autorizar`** e clique em **Executar**. Aceite as permissões ("Avançado → Acessar..." se o Google avisar que o app não foi verificado). O registro deve mostrar `OK: <nome da planilha>`. Se aparecer "OAuth client is not fully created yet", espere 15–30 min e rode de novo.
+5. **Implantar → Nova implantação → tipo App da Web**. Executar como: **Eu**. Quem pode acessar: **Qualquer pessoa**.
+6. Abra a URL `/exec` no navegador: deve mostrar `"ok":true`, `"planilha":true`, `"token":true`.
+7. Na Vercel, defina `APPS_SCRIPT_URL` (a URL `/exec`), `BACKUP_TOKEN` e `CRON_SECRET` e faça Redeploy.
+8. No painel, **Log → Fazer backup agora**. Se falhar, o motivo aparece na própria linha do Log.
+
+Sem o token correto, o script recusa qualquer envio. Ao mudar o código do script, use **Gerenciar implantações → editar → Nova versão** para manter a mesma URL.
 
 ## 4. GitHub e Vercel
 1. Crie um repositório **privado** no GitHub e envie o projeto (o `.gitignore` já impede que `.env.local` suba).

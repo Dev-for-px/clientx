@@ -107,7 +107,7 @@ export async function runBackup(): Promise<void> {
     const counts = await backupToSheet();
     await audit(me.nome, "backup_ok", JSON.stringify(counts));
   } catch (e) {
-    await audit(me.nome, "backup_falhou", String(e));
+    await audit(me.nome, "backup_falhou", e instanceof Error ? e.message : String(e));
   }
   revalidatePath("/painel/log");
 }

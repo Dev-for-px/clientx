@@ -20,9 +20,9 @@ Sistema interno de gestão de clientes (formulário de cadastro + painel). Usuá
 - Push na `main` publica automaticamente.
 
 ## Pendências
-- Confirmar que o SQL das tabelas `usuarios` e `config` foi rodado no Supabase.
 - Confirmar acesso ao painel após correção de sessão antiga (commit "Mantém sessões do dono...").
-- Backup: Apps Script deu erro "OAuth client is not fully created yet" (aguardar/autorizar `doGet`), depois definir `APPS_SCRIPT_URL` e `BACKUP_TOKEN` na Vercel e Redeploy.
+- Backup refeito (Apps Script v2, com `autorizar` e diagnóstico em `doGet`): reinstalar a planilha do zero seguindo o LEIA-ME §3 e testar pelo botão no Log.
+- Feito em 2026-10-14: tabelas `usuarios` e `config` confirmadas no Supabase (6 tabelas, RLS ligado).
 - Opcional: trocar domínio (`clientx.vercel.app` já é de outro projeto).
 
 ## Testes

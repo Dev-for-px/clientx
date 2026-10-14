@@ -3,6 +3,9 @@ import { requireOwner } from "@/lib/auth";
 import { runBackup } from "@/app/actions/data";
 import { Submit } from "@/components/Submit";
 
+// O botão "Fazer backup agora" roda aqui; o Apps Script pode levar alguns segundos.
+export const maxDuration = 60;
+
 const ACOES: Record<string, string> = {
   login_ok: "Entrou no painel",
   login_falhou: "Tentativa de login falhou",
@@ -41,7 +44,7 @@ export default async function Log() {
       <div className="content">
         <div className="tablebox">
           <table>
-            <thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Origem</th></tr></thead>
+            <thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Origem / detalhe</th></tr></thead>
             <tbody>
               {rows.map((r, i) => {
                 const falha = r.acao.includes("falhou");
@@ -50,7 +53,7 @@ export default async function Log() {
                     <td>{new Date(r.quando).toLocaleString("pt-BR")}</td>
                     <td>{r.quem}</td>
                     <td><span className={`pill ${falha ? "p-bad" : "p-off"}`}>{ACOES[r.acao] ?? r.acao}</span></td>
-                    <td className="s">{r.ip_hash}</td>
+                    <td className="s">{r.acao.startsWith("backup_") ? r.detalhe : r.ip_hash}</td>
                   </tr>
                 );
               })}
