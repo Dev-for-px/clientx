@@ -58,10 +58,9 @@ CRON_SECRET=${randomBytes(32).toString("base64url")}
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 
-# Backup na planilha Google (conta de serviço)
-SHEET_ID=
-GOOGLE_SERVICE_ACCOUNT_EMAIL=
-GOOGLE_PRIVATE_KEY=
+# Backup na planilha (Apps Script)
+APPS_SCRIPT_URL=
+BACKUP_TOKEN=${randomBytes(32).toString("base64url")}
 `;
 writeFileSync(".env.local", env, { mode: 0o600 });
 

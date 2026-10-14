@@ -1,69 +1,43 @@
 import "server-only";
-import { JWT } from "google-auth-library";
 import { TABS, readAll, type TabName } from "./db";
 
-// Backup: copia todas as tabelas do Supabase para a planilha (sobrescreve cada aba).
-// Os campos sensíveis já estão criptografados no banco e continuam assim na planilha.
-
-const SCOPE = "https://www.googleapis.com/auth/spreadsheets";
-let jwt: JWT | null = null;
+// Backup: envia todas as tabelas para um Apps Script ligado à planilha,
+// que sobrescreve cada aba. Os campos sensíveis já vão criptografados.
 
 function cfg() {
-  const id = process.env.SHEET_ID ?? "";
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? "";
-  const key = (process.env.GOOGLE_PRIVATE_KEY ?? "").replace(/\\n/g, "\n");
-  if (!id || !email || !key) throw new Error("Backup não configurado (SHEET_ID / credenciais Google)");
-  return { id, email, key };
+  const url = process.env.APPS_SCRIPT_URL ?? "";
+  const token = process.env.BACKUP_TOKEN ?? "";
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(url)) {
+    throw new Error("APPS_SCRIPT_URL ausente ou inválida");
+  }
+  if (token.length < 32) throw new Error("BACKUP_TOKEN ausente");
+  return { url, token };
 }
-
-async function headers() {
-  const c = cfg();
-  if (!jwt) jwt = new JWT({ email: c.email, key: c.key, scopes: [SCOPE] });
-  const t = await jwt.getAccessToken();
-  if (!t.token) throw new Error("Falha ao autenticar no Google");
-  return { Authorization: `Bearer ${t.token}`, "Content-Type": "application/json" };
-}
-
-async function call(p: string, init: RequestInit = {}) {
-  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cfg().id}${p}`, {
-    ...init,
-    headers: await headers(),
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`Erro na planilha (${res.status})`);
-  return res.json();
-}
-
-// Impede que um valor vire fórmula na planilha.
-const clean = (v: string) => (/^[=+\-@\t\r]/.test(v) ? "'" + v : v);
 
 export async function backupToSheet(): Promise<Record<string, number>> {
-  // A tabela de usuários (senhas e 2FA) nunca vai para a planilha.
+  const { url, token } = cfg();
+  // Usuários (senhas/2FA) e configurações nunca vão para a planilha.
   const tabs = (Object.keys(TABS) as TabName[]).filter((t) => t !== "Usuarios" && t !== "Config");
-  const meta = await call("?fields=sheets.properties.title");
-  const have = new Set((meta.sheets ?? []).map((s: { properties: { title: string } }) => s.properties.title));
-  const missing = tabs.filter((t) => !have.has(t));
-  if (missing.length) {
-    await call(":batchUpdate", {
-      method: "POST",
-      body: JSON.stringify({
-        requests: missing.map((title) => ({ addSheet: { properties: { title, gridProperties: { frozenRowCount: 1 } } } })),
-      }),
-    });
-  }
 
+  const payload: Record<string, string[][]> = {};
   const counts: Record<string, number> = {};
   for (const tab of tabs) {
     const rows = await readAll(tab);
-    const values = [TABS[tab] as readonly string[], ...rows.map((r) => TABS[tab].map((c) => clean(r[c] ?? "")))];
-    await call(`/values/${tab}!A:AZ:clear`, { method: "POST", body: "{}" });
-    await call(`/values/${tab}!A1?valueInputOption=RAW`, { method: "PUT", body: JSON.stringify({ values }) });
+    payload[tab] = [TABS[tab] as unknown as string[], ...rows.map((r) => TABS[tab].map((c) => r[c] ?? ""))];
     counts[tab] = rows.length;
   }
-  const stamp = [["Último backup", new Date().toISOString()], ...Object.entries(counts).map(([k, v]) => [k, String(v)])];
-  if (!have.has("Backup")) {
-    await call(":batchUpdate", { method: "POST", body: JSON.stringify({ requests: [{ addSheet: { properties: { title: "Backup" } } }] }) });
-  }
-  await call(`/values/Backup!A1?valueInputOption=RAW`, { method: "PUT", body: JSON.stringify({ values: stamp }) });
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ token, tabs: payload }),
+    redirect: "follow",
+    cache: "no-store",
+  });
+  const text = await res.text();
+  let data: { ok?: boolean; erro?: string } = {};
+  try { data = JSON.parse(text); } catch { /* resposta não-JSON */ }
+  if (!res.ok || data.ok !== true) throw new Error(`Backup recusado: ${data.erro ?? res.status}`);
   return counts;
 }
+

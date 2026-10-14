@@ -32,13 +32,13 @@ Ele pede e-mail e senha do admin (mín. 14 caracteres) e cria:
 1. No projeto Supabase, abra **SQL Editor → New query**, cole o conteúdo de `supabase/schema.sql` e clique em **Run**.
 2. Em **Project Settings → API Keys**, copie a chave **service_role** (secreta) para `SUPABASE_SERVICE_ROLE_KEY`. Nunca use essa chave no navegador.
 
-## 3. Planilha de backup (Google)
-1. Crie uma planilha vazia (sheets.new). O ID é o trecho da URL entre `/d/` e `/edit`.
-2. console.cloud.google.com → novo projeto → ative a **Google Sheets API**.
-3. **IAM → Contas de serviço → Criar** → **Chaves → Adicionar chave → JSON**.
-4. Compartilhe a planilha com o `client_email` do JSON como **Editor**.
-5. Preencha `SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL` e `GOOGLE_PRIVATE_KEY` (o `private_key` do JSON) e apague o JSON.
-As abas são criadas sozinhas no primeiro backup.
+## 3. Planilha de backup (só Planilha + Apps Script)
+1. Crie uma planilha vazia (sheets.new).
+2. **Extensões → Apps Script**. Apague o código de exemplo, cole o conteúdo de `apps-script/Backup.gs` e salve.
+3. **Configurações do projeto (engrenagem) → Propriedades do script → Adicionar**: `BACKUP_TOKEN` = o mesmo valor do `BACKUP_TOKEN` da Vercel.
+4. **Implantar → Nova implantação → tipo App da Web**. Executar como: **Eu**. Quem pode acessar: **Qualquer pessoa**. Autorize.
+5. Copie a URL que termina em `/exec` para `APPS_SCRIPT_URL` na Vercel e faça Redeploy.
+Sem o token correto, o script recusa qualquer envio.
 
 ## 4. GitHub e Vercel
 1. Crie um repositório **privado** no GitHub e envie o projeto (o `.gitignore` já impede que `.env.local` suba).
