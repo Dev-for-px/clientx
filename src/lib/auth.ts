@@ -19,7 +19,8 @@ export type Sess = { sub: string; papel: "dono" | "membro"; nome: string };
 export async function requireAdmin(): Promise<Sess> {
   const s = await verify("admin", cookies().get(COOKIES.admin)?.value);
   if (!s || typeof s.sub !== "string") redirect("/");
-  if (s.papel === "dono") return { sub: "dono", papel: "dono", nome: String(s.nome ?? "Dono") };
+  // "admin" = sessão criada antes da atualização da equipe (só o dono existia).
+  if (s.papel === "dono" || s.sub === "admin") return { sub: "dono", papel: "dono", nome: String(s.nome ?? "Dono") };
   // Membro desativado perde o acesso na hora, mesmo com sessão aberta.
   const u = (await readAll("Usuarios")).find((x) => x.id === s.sub);
   if (!u || u.ativo !== "sim") redirect("/");
