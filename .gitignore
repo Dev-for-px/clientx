@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.data/
+.env
+.env.*
+!.env.example
+2fa-qrcode.png
+*.pem
+*service-account*.json
+next-env.d.ts
+.vercel
