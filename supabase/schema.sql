@@ -39,3 +39,19 @@ alter table public.log        enable row level security;
 
 -- Garante que as chaves públicas não tenham nenhum acesso.
 revoke all on public.clientes, public.acessos, public.tentativas, public.log from anon, authenticated;
+
+-- Equipe (membros com login próprio + 2FA)
+create table if not exists public.usuarios (
+  id text primary key,
+  nome text, email_hash text unique, email text, senha_hash text, totp_secret text,
+  papel text, ativo text, criado_em text, ultimo_login text
+);
+alter table public.usuarios enable row level security;
+revoke all on public.usuarios from anon, authenticated;
+
+-- Configurações do sistema (ex.: formulário exige senha)
+create table if not exists public.config (
+  id text primary key, valor text, criado_em text
+);
+alter table public.config enable row level security;
+revoke all on public.config from anon, authenticated;

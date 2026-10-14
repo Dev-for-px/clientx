@@ -1,10 +1,13 @@
 import { AccessForm } from "@/components/AccessForm";
-import { toggleAccess } from "@/app/actions/data";
-import { readAll } from "@/lib/db";
+import { setFormPassword, toggleAccess } from "@/app/actions/data";
+import { getConfig, readAll } from "@/lib/db";
+import { requireOwner } from "@/lib/auth";
 
 const fmt = (iso: string) => (iso ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—");
 
 export default async function Acessos() {
+  await requireOwner();
+  const exigeSenha = (await getConfig("form_senha", "sim")) !== "nao";
   const hoje = new Date().toISOString().slice(0, 10);
   const rows = (await readAll("Acessos")).sort((a, b) => b.criado_em.localeCompare(a.criado_em));
   return (
@@ -16,7 +19,19 @@ export default async function Acessos() {
         </div>
       </header>
       <div className="content">
-        <AccessForm />
+        <section className="card">
+          <h2>Como o formulário é aberto</h2>
+          <form action={setFormPassword} className="seg" style={{ maxWidth: 520 }}>
+            <button type="submit" name="valor" value="sim" aria-pressed={exigeSenha}>Com senha</button>
+            <button type="submit" name="valor" value="nao" aria-pressed={!exigeSenha}>Sem senha</button>
+          </form>
+          <p className="note">
+            {exigeSenha
+              ? "Cada pessoa precisa de uma senha criada abaixo para abrir o formulário."
+              : "Atenção: qualquer pessoa com o link /formulario consegue cadastrar. Há um limite de 15 cadastros a cada 15 minutos por origem."}
+          </p>
+        </section>
+        {exigeSenha && <AccessForm />}
         <div className="tablebox">
           {rows.length === 0 ? (
             <div className="empty">Nenhum acesso criado ainda.</div>

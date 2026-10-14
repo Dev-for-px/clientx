@@ -1,4 +1,5 @@
 import { readAll } from "@/lib/db";
+import { requireOwner } from "@/lib/auth";
 import { runBackup } from "@/app/actions/data";
 import { Submit } from "@/components/Submit";
 
@@ -14,10 +15,17 @@ const ACOES: Record<string, string> = {
   acesso_desativado: "Desativou acesso",
   acesso_ativado: "Reativou acesso",
   backup_ok: "Backup na planilha feito",
+  form_senha_ligada: "Formulário passou a exigir senha",
+  form_senha_desligada: "Formulário liberado sem senha",
+  membro_criado: "Adicionou membro da equipe",
+  membro_desativado: "Desativou membro da equipe",
+  membro_ativado: "Reativou membro da equipe",
+  membro_resetado: "Gerou novo acesso para membro",
   backup_falhou: "Backup na planilha falhou",
 };
 
 export default async function Log() {
+  await requireOwner();
   const rows = (await readAll("Log")).reverse().slice(0, 200);
   return (
     <>

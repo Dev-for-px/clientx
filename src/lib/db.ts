@@ -15,13 +15,15 @@ export const TABS = {
   Acessos: ["id", "nome", "senha_hash", "ativo", "criado_em", "validade", "ultimo_uso", "cadastros"],
   Tentativas: ["quando", "tipo", "chave", "sucesso"],
   Log: ["quando", "quem", "acao", "detalhe", "ip_hash"],
+  Usuarios: ["id", "nome", "email_hash", "email", "senha_hash", "totp_secret", "papel", "ativo", "criado_em", "ultimo_login"],
+  Config: ["id", "valor", "criado_em"],
 } as const;
 
 export type TabName = keyof typeof TABS;
 export type Row = Record<string, string>;
 
-const TABLE: Record<TabName, string> = { Clientes: "clientes", Acessos: "acessos", Tentativas: "tentativas", Log: "log" };
-const ORDER: Record<TabName, string> = { Clientes: "criado_em", Acessos: "criado_em", Tentativas: "seq", Log: "seq" };
+const TABLE: Record<TabName, string> = { Clientes: "clientes", Acessos: "acessos", Tentativas: "tentativas", Log: "log", Usuarios: "usuarios", Config: "config" };
+const ORDER: Record<TabName, string> = { Clientes: "criado_em", Acessos: "criado_em", Tentativas: "seq", Log: "seq", Usuarios: "criado_em", Config: "id" };
 
 function cfg() {
   const url = process.env.SUPABASE_URL ?? "";
@@ -121,4 +123,14 @@ export async function updateById(tab: TabName, id: string, patch: Row): Promise<
     headers: { Prefer: "return=representation" },
   });
   return ((await res.json()) as unknown[]).length > 0;
+}
+
+// Configurações simples (chave → valor).
+export async function getConfig(id: string, fallback: string): Promise<string> {
+  return (await readAll("Config")).find((r) => r.id === id)?.valor ?? fallback;
+}
+
+export async function setConfig(id: string, valor: string): Promise<void> {
+  const ok = await updateById("Config", id, { valor });
+  if (!ok) await append("Config", { id, valor, criado_em: new Date().toISOString() });
 }

@@ -38,7 +38,8 @@ async function call(p: string, init: RequestInit = {}) {
 const clean = (v: string) => (/^[=+\-@\t\r]/.test(v) ? "'" + v : v);
 
 export async function backupToSheet(): Promise<Record<string, number>> {
-  const tabs = Object.keys(TABS) as TabName[];
+  // A tabela de usuários (senhas e 2FA) nunca vai para a planilha.
+  const tabs = (Object.keys(TABS) as TabName[]).filter((t) => t !== "Usuarios" && t !== "Config");
   const meta = await call("?fields=sheets.properties.title");
   const have = new Set((meta.sheets ?? []).map((s: { properties: { title: string } }) => s.properties.title));
   const missing = tabs.filter((t) => !have.has(t));
