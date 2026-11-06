@@ -8,6 +8,8 @@ export const PERMS = [
   { id: "clientes_excluir", label: "Excluir clientes" },
   { id: "acessos", label: "Gerenciar acessos ao formulário" },
   { id: "log", label: "Ver registro de atividades" },
+  { id: "cassino_ver", label: "Ver o Cassino" },
+  { id: "cassino_editar", label: "Editar casas e GGR do Cassino" },
 ] as const;
 
 export type Perm = (typeof PERMS)[number]["id"];

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { COOKIES, cookieOpts, sign, verify } from "@/lib/jwt";
+import { COOKIES, DEST, cookieOpts, sign, verify } from "@/lib/jwt";
 
 function csp(nonce: string) {
   return [
@@ -46,10 +46,31 @@ export async function middleware(req: NextRequest) {
   const c = req.cookies;
 
   // 1) Endereço secreto do painel: libera a tela de login por 30 min.
-  if (adminPath.length >= 8 && pathname === `/${adminPath}`) {
+  //    /<secreto>/cassino faz o mesmo e, depois do login, leva ao Cassino.
+  if (adminPath.length >= 8 && (pathname === `/${adminPath}` || pathname === `/${adminPath}/cassino`)) {
     const res = NextResponse.redirect(new URL("/painel/entrar", req.url));
     res.cookies.set(COOKIES.gate, await sign("gate"), cookieOpts("gate"));
+    if (pathname.endsWith("/cassino")) res.cookies.set(DEST, "cassino", { ...cookieOpts("gate"), httpOnly: true });
+    else res.cookies.delete(DEST);
     return res;
+  }
+
+  // Login do Cassino: segue a mesma regra do /entrar (só quando o endereço secreto está desligado).
+  if (pathname === "/cassino/login") {
+    if (await secretPathOn()) return notFound(req);
+    const admin = await verify("admin", c.get(COOKIES.admin)?.value);
+    const res = NextResponse.redirect(new URL(admin ? "/cassino" : "/painel/entrar", req.url));
+    if (!admin) {
+      res.cookies.set(COOKIES.gate, await sign("gate"), cookieOpts("gate"));
+      res.cookies.set(DEST, "cassino", { ...cookieOpts("gate"), httpOnly: true });
+    }
+    return res;
+  }
+
+  // Área do Cassino: exige sessão do painel.
+  if (pathname === "/cassino" || pathname.startsWith("/cassino/")) {
+    const admin = await verify("admin", c.get(COOKIES.admin)?.value);
+    if (!admin) return (await secretPathOn()) ? notFound(req) : NextResponse.redirect(new URL("/cassino/login", req.url));
   }
 
   // Endereço secreto desligado: o login fica em /entrar.
@@ -57,6 +78,7 @@ export async function middleware(req: NextRequest) {
     if (await secretPathOn()) return notFound(req);
     const res = NextResponse.redirect(new URL("/painel/entrar", req.url));
     res.cookies.set(COOKIES.gate, await sign("gate"), cookieOpts("gate"));
+    res.cookies.delete(DEST);
     return res;
   }
 

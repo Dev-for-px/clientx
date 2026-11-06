@@ -8,6 +8,9 @@ export const COOKIES = {
   form: "__Host-cx_form",
 } as const;
 
+// Para onde ir depois do login ("cassino" ou vazio = painel).
+export const DEST = "__Host-cx_dest";
+
 export const TTL = { gate: 30 * 60, pre: 5 * 60, admin: 8 * 60 * 60, form: 2 * 60 * 60 } as const;
 
 export type Kind = keyof typeof COOKIES;

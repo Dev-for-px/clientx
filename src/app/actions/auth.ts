@@ -5,13 +5,21 @@ import { authenticator } from "otplib";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { env } from "@/lib/env";
-import { COOKIES, cookieOpts, sign, verify } from "@/lib/jwt";
+import { COOKIES, DEST, cookieOpts, sign, verify } from "@/lib/jwt";
 import { audit, isLocked, recordAttempt, slow } from "@/lib/auth";
 import { append, readAll, recentAttempts, updateById } from "@/lib/db";
 import { decrypt, safeEqual, sha256 } from "@/lib/crypto";
 import { security } from "@/lib/security";
 
 export type State = { error?: string };
+
+// Destino após o login: Cassino (se entrou por /cassino/login) ou o painel.
+function destino(): string {
+  const jar = cookies();
+  const d = jar.get(DEST)?.value;
+  jar.delete(DEST);
+  return d === "cassino" ? "/cassino" : "/painel";
+}
 
 const LOCK_MSG = "Muitas tentativas. Aguarde 15 minutos e tente de novo.";
 
@@ -54,7 +62,7 @@ export async function adminLogin(_: State, fd: FormData): Promise<State> {
     jar.delete(COOKIES.gate);
     jar.set(COOKIES.admin, await sign("admin", { sub, papel, nome }), cookieOpts("admin"));
     await audit(nome, "login_ok", "sem 2FA");
-    redirect("/painel");
+    redirect(destino());
   }
   cookies().set(COOKIES.pre, await sign("pre", { sub }), cookieOpts("pre"));
   redirect("/painel/2fa");
@@ -97,7 +105,7 @@ export async function adminVerify2fa(_: State, fd: FormData): Promise<State> {
   jar.delete(COOKIES.gate);
   jar.set(COOKIES.admin, await sign("admin", { sub: pre.sub, papel, nome }), cookieOpts("admin"));
   await audit(nome, "login_ok");
-  redirect("/painel");
+  redirect(destino());
 }
 
 export async function adminLogout() {

@@ -16,6 +16,12 @@ Sistema interno de gestão de clientes (formulário de cadastro + painel). Usuá
 - Campos sensíveis criptografados AES-256-GCM (`src/lib/crypto.ts`, lista em `src/lib/clients.ts`). Nunca trocar `ENCRYPTION_KEY`.
 - CSP com nonce no middleware, cookies `__Host-`, server actions sempre revalidam sessão.
 
+## Cassino (/cassino)
+- Área de gestão das casas de apostas no mesmo app e no mesmo Supabase: `src/app/cassino/(app)` (Casas, Fechamento de GGR, Integrações), `src/lib/casino.ts`, `src/lib/casino-fields.ts`, `src/app/actions/casino.ts`.
+- Tabelas: `casas`, `integracoes` (catálogo cadastrável, semeado na 1ª leitura), `casa_integracoes` (status/taxa/credenciais criptografadas por casa), `ggr` (fechamento por período; a pagar = GGR × % da casa + servidor opcional, ou valor manual).
+- Mesmo login/sessão do painel. Entrada: `/<ADMIN_PATH>/cassino` (endereço secreto ligado) ou `/cassino/login` (endereço secreto desligado). Cookie `__Host-cx_dest` leva ao /cassino após o login.
+- Permissões novas: `cassino_ver`, `cassino_editar` (dono tem todas). Integrações só o dono. Credenciais só aparecem para quem tem `cassino_editar`.
+
 ## Git / deploy
 - Commits DEVEM ter autor `PerformanceX <peformance.estrategia@gmail.com>` — senão a Vercel (Hobby) bloqueia o deploy.
 - Push na `main` publica automaticamente.

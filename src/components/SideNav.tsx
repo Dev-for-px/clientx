@@ -9,6 +9,7 @@ const ITEMS = [
   { href: "/painel/acessos", label: "Acessos ao formulário", precisa: "acessos" },
   { href: "/painel/log", label: "Registro de atividades", precisa: "log" },
   { href: "/painel/seguranca", label: "Segurança", precisa: "dono" },
+  { href: "/cassino", label: "Cassino →", precisa: "cassino_ver" },
 ];
 
 export function SideNav({ dono, perms }: { dono: boolean; perms: string[] }) {

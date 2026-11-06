@@ -17,13 +17,23 @@ export const TABS = {
   Log: ["quando", "quem", "acao", "detalhe", "ip_hash"],
   Usuarios: ["id", "nome", "email_hash", "email", "senha_hash", "totp_secret", "papel", "ativo", "criado_em", "ultimo_login"],
   Config: ["id", "valor", "criado_em"],
+  // Cassino
+  Casas: [
+    "id", "criado_em", "atualizado_em", "criado_por", "numero", "status",
+    "nome", "dominio_site", "dominio_backoffice", "dominio_afiliados",
+    "setup", "ggr_sl", "ggr_sy", "ggr_vivo", "servidor_semana",
+    "responsavel", "whatsapp", "signal", "grupo_whatsapp", "grupo_signal", "observacoes",
+  ],
+  Integracoes: ["id", "tipo", "nome", "taxa_padrao", "campos", "ativo", "ordem", "criado_em"],
+  CasaIntegracoes: ["id", "casa_id", "integracao_id", "status", "taxa", "credenciais", "obs", "atualizado_em"],
+  Ggr: ["id", "casa_id", "inicio", "fim", "ggr_sl", "ggr_sy", "ggr_vivo", "incluir_servidor", "valor_pagar", "pagamento", "status_pagamento", "obs", "criado_em", "criado_por"],
 } as const;
 
 export type TabName = keyof typeof TABS;
 export type Row = Record<string, string>;
 
-const TABLE: Record<TabName, string> = { Clientes: "clientes", Acessos: "acessos", Tentativas: "tentativas", Log: "log", Usuarios: "usuarios", Config: "config" };
-const ORDER: Record<TabName, string> = { Clientes: "criado_em", Acessos: "criado_em", Tentativas: "seq", Log: "seq", Usuarios: "criado_em", Config: "id" };
+const TABLE: Record<TabName, string> = { Clientes: "clientes", Acessos: "acessos", Tentativas: "tentativas", Log: "log", Usuarios: "usuarios", Config: "config", Casas: "casas", Integracoes: "integracoes", CasaIntegracoes: "casa_integracoes", Ggr: "ggr" };
+const ORDER: Record<TabName, string> = { Clientes: "criado_em", Acessos: "criado_em", Tentativas: "seq", Log: "seq", Usuarios: "criado_em", Config: "id", Casas: "criado_em", Integracoes: "ordem", CasaIntegracoes: "atualizado_em", Ggr: "inicio" };
 
 function cfg() {
   const url = process.env.SUPABASE_URL ?? "";
@@ -126,7 +136,7 @@ export async function updateById(tab: TabName, id: string, patch: Row): Promise<
 }
 
 // Exclui de verdade a linha no banco (Clientes, Acessos ou Usuarios).
-export async function deleteById(tab: "Clientes" | "Acessos" | "Usuarios", id: string): Promise<boolean> {
+export async function deleteById(tab: "Clientes" | "Acessos" | "Usuarios" | "Casas" | "Integracoes" | "CasaIntegracoes" | "Ggr", id: string): Promise<boolean> {
   if (!/^[A-Za-z0-9_-]{6,30}$/.test(id)) return false;
   if (!cfg()) {
     const db = await localRead();

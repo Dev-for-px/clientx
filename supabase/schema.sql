@@ -55,3 +55,33 @@ create table if not exists public.config (
 );
 alter table public.config enable row level security;
 revoke all on public.config from anon, authenticated;
+
+-- ===== Cassino (/cassino) =====
+create table if not exists public.casas (
+  id text primary key,
+  criado_em text, atualizado_em text, criado_por text, numero text, status text,
+  nome text, dominio_site text, dominio_backoffice text, dominio_afiliados text,
+  setup text, ggr_sl text, ggr_sy text, ggr_vivo text, servidor_semana text,
+  responsavel text, whatsapp text, signal text, grupo_whatsapp text, grupo_signal text, observacoes text
+);
+create table if not exists public.integracoes (
+  id text primary key, tipo text, nome text, taxa_padrao text, campos text,
+  ativo text, ordem text, criado_em text
+);
+create table if not exists public.casa_integracoes (
+  id text primary key, casa_id text, integracao_id text, status text, taxa text,
+  credenciais text, obs text, atualizado_em text
+);
+create index if not exists casa_integracoes_casa on public.casa_integracoes (casa_id);
+create table if not exists public.ggr (
+  id text primary key, casa_id text, inicio text, fim text,
+  ggr_sl text, ggr_sy text, ggr_vivo text, incluir_servidor text,
+  valor_pagar text, pagamento text, status_pagamento text, obs text,
+  criado_em text, criado_por text
+);
+create index if not exists ggr_periodo on public.ggr (inicio);
+alter table public.casas            enable row level security;
+alter table public.integracoes      enable row level security;
+alter table public.casa_integracoes enable row level security;
+alter table public.ggr              enable row level security;
+revoke all on public.casas, public.integracoes, public.casa_integracoes, public.ggr from anon, authenticated;
