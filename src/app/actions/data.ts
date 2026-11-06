@@ -168,3 +168,14 @@ export async function setFormPassword(fd: FormData) {
   await audit(me.nome, v === "sim" ? "form_senha_ligada" : "form_senha_desligada");
   revalidatePath("/painel/acessos");
 }
+
+export async function setSecurity(fd: FormData) {
+  const me = await requireOwner();
+  const { SEG } = await import("@/lib/security");
+  const chave = String(fd.get("chave") ?? "");
+  if (!(chave in SEG)) return;
+  const v = String(fd.get("valor") ?? "") === "nao" ? "nao" : "sim";
+  await setConfig(chave, v);
+  await audit(me.nome, v === "sim" ? "seguranca_ligada" : "seguranca_desligada", chave);
+  revalidatePath("/painel/seguranca");
+}

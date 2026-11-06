@@ -32,6 +32,8 @@ const ACOES: Record<string, string> = {
   membro_ativado: "Reativou membro da equipe",
   membro_resetado: "Gerou novo acesso para membro",
   log_limpo: "Limpou o registro de atividades",
+  seguranca_ligada: "Ligou proteção",
+  seguranca_desligada: "Desligou proteção",
 };
 
 // Ações cujo detalhe ajuda a entender o que aconteceu (as demais mostram a origem).

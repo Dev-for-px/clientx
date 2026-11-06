@@ -10,6 +10,7 @@ Sistema interno de gestão de clientes (formulário de cadastro + painel). Usuá
 ## Segurança (não regredir)
 - Painel só por endereço secreto `ADMIN_PATH` (middleware gera cookie "gate"); demais rotas do painel dão 404.
 - Login: senha bcrypt + 2FA TOTP; códigos não reutilizáveis; bloqueio 5 tentativas/15 min.
+- 2FA, endereço secreto e bloqueio são opcionais (página Segurança, só o dono; config `seg_2fa`, `seg_caminho`, `seg_bloqueio`; padrão ligado). Com endereço secreto desligado, login em `/entrar`.
 - Dono = credenciais nas env vars. Equipe = tabela `usuarios`; permissões na coluna `papel` como `membro:perm1,perm2` (`src/lib/perms.ts`: clientes_editar, clientes_excluir, acessos, log; `membro` sozinho = clientes_editar). Ver clientes é sempre liberado; Equipe, backup e limpar o Log só o dono. Ações usam `requirePerm`/`requireOwner`.
 - Formulário: com senha (tabela `acessos`, bcrypt) ou sem senha (config `form_senha`), limite 15 cadastros/15 min sem senha.
 - Campos sensíveis criptografados AES-256-GCM (`src/lib/crypto.ts`, lista em `src/lib/clients.ts`). Nunca trocar `ENCRYPTION_KEY`.

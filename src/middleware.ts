@@ -17,6 +17,25 @@ function csp(nonce: string) {
   ].join("; ");
 }
 
+// Lê no banco se o endereço secreto está ligado (cache curto, roda no edge).
+let cache: { v: boolean; t: number } | null = null;
+async function secretPathOn(): Promise<boolean> {
+  const url = process.env.SUPABASE_URL ?? "";
+  if (url === "local") return process.env.LOCAL_SEG_CAMINHO !== "nao";
+  if (cache && Date.now() - cache.t < 30_000) return cache.v;
+  let v = true; // na dúvida, mantém protegido
+  try {
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+    const r = await fetch(`${url}/rest/v1/config?select=valor&id=eq.seg_caminho`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      cache: "no-store",
+    });
+    if (r.ok) v = ((await r.json()) as { valor: string }[])[0]?.valor !== "nao";
+  } catch { /* mantém ligado */ }
+  cache = { v, t: Date.now() };
+  return v;
+}
+
 function notFound(req: NextRequest) {
   return NextResponse.rewrite(new URL("/nao-encontrado", req.url), { status: 404 });
 }
@@ -33,11 +52,19 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
+  // Endereço secreto desligado: o login fica em /entrar.
+  if (pathname === "/entrar") {
+    if (await secretPathOn()) return notFound(req);
+    const res = NextResponse.redirect(new URL("/painel/entrar", req.url));
+    res.cookies.set(COOKIES.gate, await sign("gate"), cookieOpts("gate"));
+    return res;
+  }
+
   let block: NextResponse | null = null;
 
   if (pathname.startsWith("/painel")) {
     const admin = await verify("admin", c.get(COOKIES.admin)?.value);
-    const gate = await verify("gate", c.get(COOKIES.gate)?.value);
+    const gate = (await verify("gate", c.get(COOKIES.gate)?.value)) || (!admin && !(await secretPathOn()));
     const pre = await verify("pre", c.get(COOKIES.pre)?.value);
     if (pathname === "/painel/entrar") {
       if (admin) block = NextResponse.redirect(new URL("/painel", req.url));

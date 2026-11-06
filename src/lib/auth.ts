@@ -52,6 +52,11 @@ const MAX_FAILS = 5;
 
 // Bloqueio por excesso de tentativas (por IP e por tipo).
 export async function isLocked(tipo: string, max = MAX_FAILS): Promise<boolean> {
+  // O limite do formulário sem senha continua sempre ativo; os demais seguem a opção do dono.
+  if (tipo !== "cadastro_livre") {
+    const { security } = await import("./security");
+    if (!(await security()).seg_bloqueio) return false;
+  }
   const since = new Date(Date.now() - WINDOW_MS).toISOString();
   const rows = await recentAttempts(tipo, ipHash(), since);
   return rows.filter((r) => r.sucesso === "nao").length >= max;

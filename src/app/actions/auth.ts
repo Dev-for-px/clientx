@@ -9,6 +9,7 @@ import { COOKIES, cookieOpts, sign, verify } from "@/lib/jwt";
 import { audit, isLocked, recordAttempt, slow } from "@/lib/auth";
 import { append, readAll, recentAttempts, updateById } from "@/lib/db";
 import { decrypt, safeEqual, sha256 } from "@/lib/crypto";
+import { security } from "@/lib/security";
 
 export type State = { error?: string };
 
@@ -18,7 +19,8 @@ const LOCK_MSG = "Muitas tentativas. Aguarde 15 minutos e tente de novo.";
 const DUMMY_HASH = "$2a$12$wxhq7FDLcsPfxRiCurbgme4eY6ZsxAEMX95b.2SDdTAUxz7e45nkK";
 
 export async function adminLogin(_: State, fd: FormData): Promise<State> {
-  if (!(await verify("gate", cookies().get(COOKIES.gate)?.value))) redirect("/");
+  const seg = await security();
+  if (seg.seg_caminho && !(await verify("gate", cookies().get(COOKIES.gate)?.value))) redirect("/");
   if (await isLocked("admin")) return { error: LOCK_MSG };
 
   const email = String(fd.get("email") ?? "").trim().toLowerCase().slice(0, 200);
@@ -38,6 +40,21 @@ export async function adminLogin(_: State, fd: FormData): Promise<State> {
     await recordAttempt("admin", false);
     await audit("desconhecido", "login_falhou");
     return { error: "E-mail ou senha incorretos." };
+  }
+  if (!seg.seg_2fa) {
+    // 2FA desligado pelo dono: entra direto após a senha.
+    let nome = "Dono", papel: "dono" | "membro" = "dono";
+    if (sub !== "dono") {
+      papel = "membro";
+      nome = (await readAll("Usuarios")).find((x) => x.id === sub)?.nome ?? "Membro";
+      await updateById("Usuarios", sub, { ultimo_login: new Date().toISOString() });
+    }
+    await recordAttempt("admin", true);
+    const jar = cookies();
+    jar.delete(COOKIES.gate);
+    jar.set(COOKIES.admin, await sign("admin", { sub, papel, nome }), cookieOpts("admin"));
+    await audit(nome, "login_ok", "sem 2FA");
+    redirect("/painel");
   }
   cookies().set(COOKIES.pre, await sign("pre", { sub }), cookieOpts("pre"));
   redirect("/painel/2fa");
